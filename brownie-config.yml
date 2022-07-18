@@ -1,0 +1,25 @@
+# use Ganache's forked mainnet mode as the default network
+# NOTE: You don't *have* to do this, but it is often helpful for testing
+networks:
+  default: mainnet-fork
+
+# automatically fetch contract sources from Etherscan
+autofetch_sources: True
+
+dependencies:
+  - bufander/yearn-vaults-v3@0.0.1
+  - OpenZeppelin/openzeppelin-contracts@4.6.0
+
+# path remapping to support imports from GitHub/NPM
+compiler:
+  solc:
+    version: 0.8.14
+    optimizer:
+      enabled: True
+      runs: 200
+    remappings:
+      # Using fork as main repo has no tag
+      - "@yearnvaultsv3=bufander/yearn-vaults-v3@0.0.1"
+      - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@4.6.0"
+
+#dotenv: .envs
