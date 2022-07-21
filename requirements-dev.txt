@@ -1,0 +1,1 @@
+eth-brownie<2.0.0
