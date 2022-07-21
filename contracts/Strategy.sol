@@ -22,17 +22,21 @@ contract Strategy is BaseStrategy {
     address internal strategyOps;
 
     IProtocolDataProvider public constant protocolDataProvider =
-    IProtocolDataProvider(0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d);
+        IProtocolDataProvider(0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d);
 
     address public aToken;
 
-    constructor(address _vault, string memory _strategyName, address _strategyOps)
-    BaseStrategy(_vault)
-    {
+    constructor(
+        address _vault,
+        string memory _strategyName,
+        address _strategyOps
+    ) BaseStrategy(_vault) {
         strategyName = _strategyName;
         strategyOps = _strategyOps;
 
-        (address _aToken, ,) = protocolDataProvider.getReserveTokensAddresses(asset);
+        (address _aToken, , ) = protocolDataProvider.getReserveTokensAddresses(
+            asset
+        );
         aToken = _aToken;
     }
 
@@ -53,18 +57,18 @@ contract Strategy is BaseStrategy {
     }
 
     function withdrawable()
-    external
-    view
-    override
-    returns (uint256 _withdrawable)
+        external
+        view
+        override
+        returns (uint256 _withdrawable)
     {
         _withdrawable = balanceOfAsset() + balanceOfAToken();
     }
 
     function _freeFunds(uint256 _amount)
-    internal
-    override
-    returns (uint256 _amountFreed)
+        internal
+        override
+        returns (uint256 _amountFreed)
     {
         uint256 idle_amount = balanceOfAsset();
         if (_amount <= idle_amount) {
@@ -73,11 +77,11 @@ contract Strategy is BaseStrategy {
         } else {
             // We need to take from Aave enough to reach _amount
             // We run with 'unchecked' as we are safe from underflow
-        unchecked {
-            _withdrawFromAave(
-                Math.min(_amount - idle_amount, balanceOfAToken())
-            );
-        }
+            unchecked {
+                _withdrawFromAave(
+                    Math.min(_amount - idle_amount, balanceOfAToken())
+                );
+            }
             _amountFreed = balanceOfAsset();
         }
     }
@@ -112,17 +116,17 @@ contract Strategy is BaseStrategy {
     }
 
     function delegatedAssets()
-    external
-    view
-    override
-    returns (uint256 _delegatedAssets)
+        external
+        view
+        override
+        returns (uint256 _delegatedAssets)
     {}
 
     function _protectedTokens()
-    internal
-    view
-    override
-    returns (address[] memory _protected)
+        internal
+        view
+        override
+        returns (address[] memory _protected)
     {}
 
     function _checkAllowance(
@@ -138,9 +142,9 @@ contract Strategy is BaseStrategy {
 
     function _lendingPool() internal view returns (ILendingPool) {
         return
-        ILendingPool(
-            protocolDataProvider.ADDRESSES_PROVIDER().getLendingPool()
-        );
+            ILendingPool(
+                protocolDataProvider.ADDRESSES_PROVIDER().getLendingPool()
+            );
     }
 
     function _withdrawFromAave(uint256 amount) internal {
@@ -165,10 +169,7 @@ contract Strategy is BaseStrategy {
 
     // Aux function that will return _amount to strategyOps without Vault knowing, therefore creating a (virtual) loss
     function auxCreateLoss(uint256 _amount) external {
-        require(
-            msg.sender == strategyOps,
-            "not strategy ops"
-        );
+        require(msg.sender == strategyOps, "not strategy ops");
         require(_amount <= _totalAssets(), "not enough assets");
         uint256 total_idle = balanceOfAsset();
         if (_amount > total_idle) {

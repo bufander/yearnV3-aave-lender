@@ -2,7 +2,6 @@
 pragma solidity 0.8.14;
 pragma experimental ABIEncoderV2;
 
-
 interface ILendingPool {
     /**
      * @dev Deposits an `amount` of underlying asset into the reserve, receiving in return overlying aTokens.
