@@ -9,6 +9,8 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 // TODO: import it from '@yearnvaultsv3/contracts'
 import {BaseStrategy} from "./BaseStrategy.sol";
 import "./interfaces/ILendingPool.sol";
+import "./interfaces/ILendingPoolAddressesProvider.sol";
+import "./interfaces/IProtocolDataProvider.sol";
 
 contract Strategy is BaseStrategy {
     //  TODO: Should strategyName be on Base Strategy?
@@ -16,15 +18,22 @@ contract Strategy is BaseStrategy {
     uint256 public minDebt;
     uint256 public maxDebt;
 
-    //  TODO: make aToken dynamic to avoid breaking if Aave changes underlying contracts.
-    //  Use Aave contracts to get address
-    address public aToken = 0xBcca60bB61934080951369a648Fb03DF4F96263C;
-    ILendingPool lp = ILendingPool(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9);
+    //    Aux address to be able to control aux methods during tests
+    address internal strategyOps;
 
-    constructor(address _vault, string memory _strategyName)
-        BaseStrategy(_vault)
+    IProtocolDataProvider public constant protocolDataProvider =
+    IProtocolDataProvider(0x057835Ad21a177dbdd3090bB1CAE03EaCF78Fc6d);
+
+    address public aToken;
+
+    constructor(address _vault, string memory _strategyName, address _strategyOps)
+    BaseStrategy(_vault)
     {
         strategyName = _strategyName;
+        strategyOps = _strategyOps;
+
+        (address _aToken, ,) = protocolDataProvider.getReserveTokensAddresses(asset);
+        aToken = _aToken;
     }
 
     function name() external view override returns (string memory) {
@@ -44,18 +53,18 @@ contract Strategy is BaseStrategy {
     }
 
     function withdrawable()
-        external
-        view
-        override
-        returns (uint256 _withdrawable)
+    external
+    view
+    override
+    returns (uint256 _withdrawable)
     {
         _withdrawable = balanceOfAsset() + balanceOfAToken();
     }
 
     function _freeFunds(uint256 _amount)
-        internal
-        override
-        returns (uint256 _amountFreed)
+    internal
+    override
+    returns (uint256 _amountFreed)
     {
         uint256 idle_amount = balanceOfAsset();
         if (_amount <= idle_amount) {
@@ -64,11 +73,11 @@ contract Strategy is BaseStrategy {
         } else {
             // We need to take from Aave enough to reach _amount
             // We run with 'unchecked' as we are safe from underflow
-            unchecked {
-                _withdrawFromAave(
-                    Math.min(_amount - idle_amount, balanceOfAToken())
-                );
-            }
+        unchecked {
+            _withdrawFromAave(
+                Math.min(_amount - idle_amount, balanceOfAToken())
+            );
+        }
             _amountFreed = balanceOfAsset();
         }
     }
@@ -103,17 +112,17 @@ contract Strategy is BaseStrategy {
     }
 
     function delegatedAssets()
-        external
-        view
-        override
-        returns (uint256 _delegatedAssets)
+    external
+    view
+    override
+    returns (uint256 _delegatedAssets)
     {}
 
     function _protectedTokens()
-        internal
-        view
-        override
-        returns (address[] memory _protected)
+    internal
+    view
+    override
+    returns (address[] memory _protected)
     {}
 
     function _checkAllowance(
@@ -127,12 +136,21 @@ contract Strategy is BaseStrategy {
         }
     }
 
+    function _lendingPool() internal view returns (ILendingPool) {
+        return
+        ILendingPool(
+            protocolDataProvider.ADDRESSES_PROVIDER().getLendingPool()
+        );
+    }
+
     function _withdrawFromAave(uint256 amount) internal {
+        ILendingPool lp = _lendingPool();
         _checkAllowance(address(lp), aToken, amount);
         lp.withdraw(address(asset), amount, address(this));
     }
 
     function _depositToAave(uint256 amount) internal {
+        ILendingPool lp = _lendingPool();
         _checkAllowance(address(lp), address(asset), amount);
         lp.deposit(address(asset), amount, address(this), 0);
     }
@@ -145,11 +163,11 @@ contract Strategy is BaseStrategy {
         return IERC20(asset).balanceOf(address(this));
     }
 
-    // Aux function that will return _amount to SMS without Vault knowing, therefore creating a (virtual) loss
+    // Aux function that will return _amount to strategyOps without Vault knowing, therefore creating a (virtual) loss
     function auxCreateLoss(uint256 _amount) external {
         require(
-            msg.sender == 0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7,
-            "not sms"
+            msg.sender == strategyOps,
+            "not strategy ops"
         );
         require(_amount <= _totalAssets(), "not enough assets");
         uint256 total_idle = balanceOfAsset();

@@ -52,7 +52,9 @@ def vault(gov, usdc, create_vault):
 def create_strategy(Strategy, strategist):
     # TODO: Vault should come from `@jmonteer/yearn-vaultV3`, not from local contract
     def create_strategy(vault):
-        strategy = strategist.deploy(Strategy, vault.address, "test_strategy")
+        strategy = strategist.deploy(
+            Strategy, vault.address, "test_strategy", strategist.address
+        )
         return strategy
 
     yield create_strategy
@@ -77,7 +79,7 @@ def provide_strategy_with_debt():
 
 @pytest.fixture
 def deposit_into_vault(usdc, gov):
-    def deposit_into_vault(vault, amount_to_deposit=10 ** 12):
+    def deposit_into_vault(vault, amount_to_deposit=10**12):
         whale = accounts.at(USDC_WHALE_ADDRESS, force=True)
         usdc.approve(vault.address, amount_to_deposit, {"from": whale})
         vault.deposit(amount_to_deposit, whale.address, {"from": whale})
@@ -87,7 +89,7 @@ def deposit_into_vault(usdc, gov):
 
 @pytest.fixture
 def create_vault_and_strategy(strategy, vault, deposit_into_vault):
-    def create_vault_and_strategy(account, amount_into_vault: int = 10 ** 6):
+    def create_vault_and_strategy(account, amount_into_vault: int = 10**6):
         deposit_into_vault(vault, amount_into_vault)
         vault.add_strategy(strategy.address, {"from": account})
         strategy.setMinDebt(0, {"from": account})
