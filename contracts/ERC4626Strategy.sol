@@ -8,12 +8,10 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./interfaces/ILendingPool.sol";
 import "./interfaces/ILendingPoolAddressesProvider.sol";
 import "./interfaces/IProtocolDataProvider.sol";
+import "./interfaces/IVault.sol";
 
 contract ERC4626Strategy is ERC4626BaseStrategy {
     using Math for uint256;
-
-    //  TODO: Should strategyName be on Base Strategy?
-    string public strategyName;
 
     //    Aux address to be able to control aux methods during tests
     address internal strategyOps;
@@ -25,16 +23,14 @@ contract ERC4626Strategy is ERC4626BaseStrategy {
 
     constructor(
         address _vault,
-        address _asset,
         string memory _strategyName,
         string memory _strategySymbol,
         address _strategyOps
-    ) ERC4626BaseStrategy(_vault, _asset) ERC20(_strategyName, _strategySymbol) {
-        strategyName = _strategyName;
+    ) ERC4626BaseStrategy(_vault, IVault(_vault).asset()) ERC20(_strategyName, _strategySymbol) {
         strategyOps = _strategyOps;
 
         (address _aToken, ,) = protocolDataProvider.getReserveTokensAddresses(
-            _asset
+            IVault(_vault).asset()
         );
         aToken = _aToken;
     }

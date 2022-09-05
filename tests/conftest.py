@@ -61,7 +61,6 @@ def create_strategy(ERC4626Strategy, strategist):
         strategy = strategist.deploy(
             ERC4626Strategy,
             vault.address,
-            vault.asset(),
             "test_strategy",
             "ts",
             strategist.address,
