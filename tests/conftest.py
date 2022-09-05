@@ -4,7 +4,7 @@ from brownie import Contract, accounts
 
 USDC_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 AUSDC_ADDRESS = "0xBcca60bB61934080951369a648Fb03DF4F96263C"
-USDC_WHALE_ADDRESS = "0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503"
+USDC_WHALE_ADDRESS = "0x0A59649758aa4d66E25f08Dd01271e891fe52199"
 
 
 @pytest.fixture(scope="function")
@@ -28,9 +28,15 @@ def atoken():
 
 
 @pytest.fixture(scope="function")
+def amount(usdc):
+    # Use always 1M
+    return 1_000_000 * 10 ** usdc.decimals()
+
+
+@pytest.fixture(scope="function")
 def create_vault(VaultV3, gov):
     def create_vault(asset, governance=gov, deposit_limit=MAX_INT):
-        vault = gov.deploy(VaultV3, asset, "VaultV3", "AV", governance)
+        vault = gov.deploy(VaultV3, asset, "VaultV3", "AV", governance, MAX_INT)
         # set vault deposit
         vault.set_deposit_limit(deposit_limit, {"from": gov})
 
@@ -49,11 +55,15 @@ def vault(gov, usdc, create_vault):
 
 
 @pytest.fixture(scope="function")
-def create_strategy(Strategy, strategist):
+def create_strategy(ERC4626Strategy, strategist):
     # TODO: Vault should come from `@jmonteer/yearn-vaultV3`, not from local contract
     def create_strategy(vault):
         strategy = strategist.deploy(
-            Strategy, vault.address, "test_strategy", strategist.address
+            ERC4626Strategy,
+            vault.address,
+            "test_strategy",
+            "ts",
+            strategist.address,
         )
         return strategy
 
@@ -68,18 +78,18 @@ def strategy(gov, usdc, vault, create_strategy):
 
 @pytest.fixture
 def provide_strategy_with_debt():
-    def provide_strategy_with_debt(account, strategy, vault, max_debt: int):
+    def provide_strategy_with_debt(account, strategy, vault, target_debt: int):
         vault.update_max_debt_for_strategy(
-            strategy.address, max_debt, {"from": account}
+            strategy.address, target_debt, {"from": account}
         )
-        vault.update_debt(strategy.address, {"from": account})
+        vault.update_debt(strategy.address, target_debt, {"from": account})
 
     return provide_strategy_with_debt
 
 
 @pytest.fixture
 def deposit_into_vault(usdc, gov):
-    def deposit_into_vault(vault, amount_to_deposit=10**12):
+    def deposit_into_vault(vault, amount_to_deposit):
         whale = accounts.at(USDC_WHALE_ADDRESS, force=True)
         usdc.approve(vault.address, amount_to_deposit, {"from": whale})
         vault.deposit(amount_to_deposit, whale.address, {"from": whale})
@@ -89,11 +99,9 @@ def deposit_into_vault(usdc, gov):
 
 @pytest.fixture
 def create_vault_and_strategy(strategy, vault, deposit_into_vault):
-    def create_vault_and_strategy(account, amount_into_vault: int = 10**6):
+    def create_vault_and_strategy(account, amount_into_vault):
         deposit_into_vault(vault, amount_into_vault)
         vault.add_strategy(strategy.address, {"from": account})
-        strategy.setMinDebt(0, {"from": account})
-        strategy.setMaxDebt(MAX_INT, {"from": account})
         return vault, strategy
 
     yield create_vault_and_strategy

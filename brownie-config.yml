@@ -8,7 +8,7 @@ autofetch_sources: True
 
 dependencies:
   - bufander/yearn-vaults-v3@0.0.1
-  - OpenZeppelin/openzeppelin-contracts@4.6.0
+  - OpenZeppelin/openzeppelin-contracts@4.7.3
 
 # path remapping to support imports from GitHub/NPM
 compiler:
@@ -20,6 +20,6 @@ compiler:
     remappings:
       # Using fork as main repo has no tag
       - "@yearnvaultsv3=bufander/yearn-vaults-v3@0.0.1"
-      - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@4.6.0"
+      - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@4.7.3"
 
 #dotenv: .envs
